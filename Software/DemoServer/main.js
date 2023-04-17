@@ -1,5 +1,5 @@
-import ConvertVideotex from "../common/ConvertVideotex";
-import CanvasManager from "../common/CanvasManager";
+import { ConvertVideotex } from "../common/ConvertVideotex.mjs";
+import { CanvasManager } from "../common/CanvasManager.mjs";
 import { loadFiles, sliceIntoChunks } from "./helpers";
 import axios from "axios";
 import "./style.css";
@@ -9,14 +9,12 @@ const $ip = document.querySelector("#ip");
 const img = document.createElement("img");
 
 const CM = new CanvasManager(document.querySelector("#mockup"));
+const CV = new ConvertVideotex();
 
 img.addEventListener(
   "load",
   async () => {
-    const chunks = sliceIntoChunks(
-      ConvertVideotex.convert(CM.getPixels(img)),
-      100
-    );
+    const chunks = sliceIntoChunks(CV.convert(CM.getPixels(img)), 100);
     const url = `http://${$ip.value}`;
     await axios.get(`${url}/new`);
     for (let i = 0; i < chunks.length; i++) {
