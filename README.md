@@ -11,7 +11,7 @@ When the bot is launch
 
 from a user on your chat will display an image.
 
-# Hardware Requirements
+## Hardware Requirements
 
 - Minitel 1B
 - ESP8266 (Nodemcu ESP8266 ESP-12F)
