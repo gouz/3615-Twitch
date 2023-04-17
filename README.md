@@ -9,7 +9,7 @@ When the bot is launched
 !3615 your_prompt
 ```
 
-from a user on your chat will display an image.
+from an user on your chat it will display an image on your minitel.
 
 ## Hardware Requirements
 
