@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Vite App</title>
+  </head>
+  <body>
+    <div id="app" class="flex items-center justify-center">
+      <form class="flex flex-col mx-auto max-w-lg">
+        <div class="mb-3">
+          <label
+            for="ip"
+            class="text-sm text-navy-700 dark:text-white font-bold"
+          >
+            IP
+          </label>
+          <input
+            type="text"
+            id="ip"
+            value="192.168.1.11"
+            class="mt-2 flex h-12 w-full items-center justify-center rounded-xl border bg-white/0 p-3 text-sm outline-none border-gray-200"
+          />
+        </div>
+        <div class="mb-3">
+          <label
+            for="loadimg"
+            class="text-sm text-navy-700 dark:text-white font-bold"
+          >
+            Image
+          </label>
+          <input
+            type="file"
+            id="loadimg"
+            value="192.168.1.11"
+            class="mt-2 flex h-12 w-full items-center justify-center rounded-xl border bg-white/0 p-3 text-sm outline-none border-gray-200"
+          />
+        </div>
+        <div class="mb-3 flex items-center justify-center">
+          <canvas width="80" height="72" id="mockup"></canvas>
+        </div>
+      </form>
+    </div>
+    <script type="module" src="/main.js"></script>
+  </body>
+</html>
