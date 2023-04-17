@@ -3,7 +3,7 @@
 As a streamer
 I want to have a bot twitch to display the first frame of a random image of giphy from a prompt
 
-When the bot is launch
+When the bot is launched
 
 ```
 !3615 your_prompt
