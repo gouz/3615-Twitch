@@ -43,7 +43,7 @@ client.on("message", (channel, tags, message, self) => {
           .get(
             `https://api.giphy.com/v1/gifs/random?api_key=${
               process.env.GIPHY_API
-            }&tag=${encodeURI(prompt)}&rating=g`
+            }&tag=${encodeURI(prompt)}`
           )
           .then((response) => {
             loadImage(response.data.data.images.original.url).then(

@@ -1,11 +1,8 @@
 import { ConvertVideotex } from "../common/ConvertVideotex.mjs";
 import { CanvasManager } from "../common/CanvasManager.mjs";
 import { loadFiles, sliceIntoChunks } from "./helpers";
-import axios from "axios";
-import "./style.css";
 
 const $loadimg = document.querySelector("#loadimg");
-const $ip = document.querySelector("#ip");
 const img = document.createElement("img");
 
 const CM = new CanvasManager(document.querySelector("#mockup"));
@@ -15,22 +12,17 @@ img.addEventListener(
   "load",
   async () => {
     const chunks = sliceIntoChunks(CV.convert(CM.getPixels(img)), 100);
-    const url = `http://${$ip.value}`;
-    await axios.get(`${url}/new`);
+    const url = `http://${window.location.hostname}`;
+    await fetch(`${url}/new`);
     for (let i = 0; i < chunks.length; i++) {
-      await axios.post(
-        `${url}/post`,
-        {
-          encrypt: Uint8Array.from(chunks[i]),
-        },
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-        }
-      );
+      const body = new FormData();
+      body.append("encrypt", new Blob([Uint8ClampedArray.from(chunks[i])]));
+      await fetch(`${url}/post`, {
+        method: "post",
+        body,
+      });
     }
-    await axios.get(`${url}/end`);
+    await fetch(`${url}/end`);
   },
   false
 );
