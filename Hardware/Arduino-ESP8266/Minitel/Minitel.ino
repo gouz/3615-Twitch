@@ -5,8 +5,8 @@
 
 Minitel minitel(3, 1); // RX, TX
 
-const char *ssid = "bobox";
-const char *password = "mon joli mot de passe";
+const char *ssid = "YOUR_SSID";
+const char *password = "YOUR_PASSWORD";
 
 AsyncWebServer server(80);
 
