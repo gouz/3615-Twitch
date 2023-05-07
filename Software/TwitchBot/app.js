@@ -61,7 +61,7 @@ const treatMessage = ({ message, tags }) => {
   const cmd = parts.shift();
   if (cmd.toLowerCase() === "!3615") {
     const prompt = parts.join(" ");
-    if ((tags.mod || tags.badges.broadcaster) && prompt.startsWith("http")) {
+    if ((tags.mod || tags.badges?.broadcaster) && prompt.startsWith("http")) {
       // is moderator, then this viewer can send image directly
       loadImage(prompt).then(treatImage);
     } else {
@@ -72,7 +72,8 @@ const treatMessage = ({ message, tags }) => {
           }&tag=${encodeURI(prompt)}`
         )
         .then((response) => {
-          loadImage(response.data.data.images.original.url).then(treatImage);
+          if (response.data.data.images)
+            loadImage(response.data.data.images.original.url).then(treatImage);
         });
     }
   }
