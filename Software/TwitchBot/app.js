@@ -70,7 +70,7 @@ const treatMessage = ({ message, tags }) => {
         .post(`${process.env.STABLE_DIFFUSION_URL}/sdapi/v1/txt2img`, {
           width: 128,
           height: 128,
-          step: 15,
+          steps: 15,
           prompt,
           negative_prompt: "nsfw",
           cfg_scale: 7,
