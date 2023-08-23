@@ -3,7 +3,8 @@ import { ConvertVideotex } from "../common/ConvertVideotex.mjs";
 import dotenv from "dotenv";
 import tmi from "tmi.js";
 import axios from "axios";
-import { createCanvas, loadImage } from "canvas";
+import { createCanvas, loadImage, Image } from "canvas";
+import terminalImage from "terminal-image";
 
 dotenv.config();
 
@@ -66,14 +67,27 @@ const treatMessage = ({ message, tags }) => {
       loadImage(prompt).then(treatImage);
     } else {
       axios
-        .get(
-          `https://api.giphy.com/v1/gifs/random?api_key=${
-            process.env.GIPHY_API
-          }&tag=${encodeURI(prompt)}`
-        )
-        .then((response) => {
-          if (response.data.data.images)
-            loadImage(response.data.data.images.original.url).then(treatImage);
+        .post(`${process.env.STABLE_DIFFUSION_URL}/sdapi/v1/txt2img`, {
+          width: 128,
+          height: 128,
+          step: 15,
+          prompt,
+          negative_prompt: "nsfw",
+          cfg_scale: 7,
+        })
+        .then(async (response) => {
+          if (response.data.images.length) {
+            const img = new Image();
+            img.src = `data:image/png;base64, ${response.data.images[0]}`;
+            console.log(prompt);
+            console.log();
+            console.log(
+              await terminalImage.buffer(
+                Buffer.from(response.data.images[0], "base64")
+              )
+            );
+            treatImage(img);
+          }
         });
     }
   }
