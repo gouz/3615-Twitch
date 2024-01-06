@@ -55,6 +55,173 @@
         <canvas width="80" height="72" id="mockup"></canvas>
       </form>
     </div>
-    <script type="module" src="/main.js"></script>
+    <script>
+      function CanvasManager(canvas) {
+        this.context = canvas.getContext("2d");
+        this.width = canvas.width;
+        this.height = canvas.height;
+      }
+      CanvasManager.prototype.clear = function () {
+        this.context.clearRect(0, 0, this.width, this.height);
+        this.context.fillStyle = "black";
+        this.context.fillRect(0, 0, this.width, this.height);
+      };
+      CanvasManager.prototype.redim = function (img) {
+        let newWidth = img.width;
+        let newHeight = img.height;
+        newHeight *= this.width / newWidth;
+        newWidth = this.width;
+        if (newHeight > this.height) {
+          newWidth *= this.height / newHeight;
+          newHeight = this.height;
+        }
+        this.context.drawImage(
+          img,
+          0,
+          0,
+          img.width,
+          img.height,
+          (this.width - newWidth) / 2,
+          (this.height - newHeight) / 2,
+          newWidth,
+          newHeight
+        );
+      };
+      CanvasManager.prototype.getPixels = function (img) {
+        this.clear();
+        this.redim(img);
+        return this.context.getImageData(0, 0, this.width, this.height).data;
+      };
+
+      function ConvertVideotex() {}
+      ConvertVideotex.prototype.convert = function (pixels) {
+        let x = 0;
+        let y = 0;
+        const pixelsArray = [];
+        for (let i = 0; i < pixels.length; i += 4) {
+          pixelsArray.push([pixels[i], pixels[i + 1], pixels[i + 2]]);
+        }
+
+        const colorLum = [0, 4, 1, 5, 2, 6, 3, 7];
+        const str = [];
+        let index = 0;
+
+        for (y = 0; y < 24; y++) {
+          for (x = 0; x < 40; x++) {
+            const colors = this.calcColors(x, y, pixelsArray);
+            str[index++] = 0x1b; // ESC char
+            str[index++] = colorLum[Math.floor(colors[0] / 32)] + 0x40; // 0x40 = Black (front)
+            str[index++] = 0x1b; // ESC char
+            str[index++] = colorLum[Math.floor(colors[1] / 32)] + 0x50; // 0x50 = Black (background)
+            str[index++] = this.calcChar(x, y, colors, pixelsArray);
+          }
+        }
+
+        const result = [0x0c, 0x0e]; // clear screen & semi graphic mode
+        for (let i = 0; i < index; i++) result.push(str[i]);
+
+        return result;
+      };
+      ConvertVideotex.prototype.brightness = function (rgb) {
+        return Math.round(
+          (parseInt(rgb[0]) * 299 +
+            parseInt(rgb[1]) * 587 +
+            parseInt(rgb[2]) * 114) /
+            1000
+        );
+      };
+      ConvertVideotex.prototype.calcColors = function (x, y, pixels) {
+        const xPix = x * 2;
+        const yPix = y * 3;
+        let lum = this.brightness(pixels[xPix + yPix * 80]);
+        let color = [lum, lum];
+        for (let b = yPix; b <= yPix + 2; b++) {
+          for (let a = xPix; a <= xPix + 1; a++) {
+            lum = this.brightness(pixels[a + b * 80]);
+            if (lum < color[0]) color[0] = lum;
+            if (lum > color[1]) color[1] = lum;
+          }
+        }
+        return color;
+      };
+      ConvertVideotex.prototype.calcChar = function (x, y, colors, pixels) {
+        const xPix = x * 2;
+        const yPix = y * 3;
+        let car = 0;
+        car += Math.pow(2, 0) * this.state(xPix + 0, yPix + 0, colors, pixels);
+        car += Math.pow(2, 1) * this.state(xPix + 1, yPix + 0, colors, pixels);
+        car += Math.pow(2, 2) * this.state(xPix + 0, yPix + 1, colors, pixels);
+        car += Math.pow(2, 3) * this.state(xPix + 1, yPix + 1, colors, pixels);
+        car += Math.pow(2, 4) * this.state(xPix + 0, yPix + 2, colors, pixels);
+        car += Math.pow(2, 5) * 1;
+        car += Math.pow(2, 6) * this.state(xPix + 1, yPix + 2, colors, pixels);
+        return car;
+      };
+      ConvertVideotex.prototype.state = function (x, y, colors, pixels) {
+        const color = this.brightness(pixels[x + y * 80]);
+        return Math.abs(colors[0] - color) > Math.abs(colors[1] - color)
+          ? 0
+          : 1;
+      };
+
+      function loadFiles(img, files) {
+        if (files.length > 0) {
+          const file = files[0];
+          if (
+            typeof FileReader !== "undefined" &&
+            file.type.indexOf("image") != -1
+          ) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+              img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+          }
+        }
+      }
+
+      function sliceIntoChunks(arr, chunkSize) {
+        const res = [];
+        res.push([arr.shift(), arr.shift()]);
+        for (let i = 0; i < arr.length; i += chunkSize * 5) {
+          const chunk = arr.slice(i, i + chunkSize * 5);
+          res.push(chunk);
+        }
+        return res;
+      }
+
+      const $loadimg = document.querySelector("#loadimg");
+      const img = document.createElement("img");
+      const CM = new CanvasManager(document.querySelector("#mockup"));
+      const CV = new ConvertVideotex();
+
+      $loadimg.addEventListener(
+        "change",
+        (e) => {
+          loadFiles(img, e.target.files);
+        },
+        false
+      );
+
+      img.addEventListener(
+        "load",
+        async () => {
+          const trame = CV.convert(CM.getPixels(img));
+          const chunks = sliceIntoChunks(trame, 20);
+          const url = `http://${window.location.hostname}`;
+          await fetch(`${url}/new`);
+          const body = new FormData();
+          body.append("trame", chunks[i].join(","));
+          for (let i = 0; i < chunks.length; i++) {
+            await fetch(`${url}/post`, {
+              method: "post",
+              body,
+            });
+          }
+          await fetch(`${url}/end`);
+        },
+        false
+      );
+    </script>
   </body>
 </html>
