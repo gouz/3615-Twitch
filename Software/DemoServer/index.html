@@ -53,6 +53,7 @@
         <label for="loadimg">Image</label>
         <input type="file" id="loadimg" />
         <canvas width="80" height="72" id="mockup"></canvas>
+        <canvas width="80" height="72" id="render"></canvas>
       </form>
     </div>
     <script>
@@ -193,7 +194,9 @@
       const $loadimg = document.querySelector("#loadimg");
       const img = document.createElement("img");
       const CM = new CanvasManager(document.querySelector("#mockup"));
+      const CR = new CanvasManager(document.querySelector("#render"));
       const CV = new ConvertVideotex();
+      const imageData = CR.context.getImageData(0, 0, 80, 72);
 
       $loadimg.addEventListener(
         "change",
@@ -207,6 +210,67 @@
         "load",
         async () => {
           const trame = CV.convert(CM.getPixels(img));
+          const colorRender = [
+            [0, 0, 0, 255],
+            [0, 255, 0, 255],
+            [0, 0, 255, 255],
+            [255, 255, 0, 255],
+            [255, 0, 0, 255],
+            [255, 255, 0, 255],
+            [255, 0, 255, 255],
+            [255, 255, 255, 255],
+          ];
+          let indexX = 0;
+          let indexY = 0;
+          const imageData = CR.context.getImageData(0, 0, 80, 72);
+          const data = imageData.data;
+          const putColor = (x, y, color) => {
+            data[(x + 80 * y) * 4] = color[0];
+            data[(x + 80 * y) * 4 + 1] = color[1];
+            data[(x + 80 * y) * 4 + 2] = color[2];
+            data[(x + 80 * y) * 4 + 3] = color[3];
+          };
+          for (let i = 2; i < trame.length - 2; i += 5) {
+            const char = trame[i + 4];
+            const bg = colorRender[trame[i + 1] - 0x40];
+            const fg = colorRender[trame[i + 3] - 0x50];
+            if ((char & (1 << 0)) === 0) {
+              putColor(indexX, indexY, fg);
+            } else {
+              putColor(indexX, indexY, bg);
+            }
+            if ((char & (1 << 1)) === 0) {
+              putColor(indexX + 1, indexY, fg);
+            } else {
+              putColor(indexX + 1, indexY, bg);
+            }
+            if ((char & (1 << 2)) === 0) {
+              putColor(indexX, indexY + 1, fg);
+            } else {
+              putColor(indexX, indexY + 1, bg);
+            }
+            if ((char & (1 << 3)) === 0) {
+              putColor(indexX + 1, indexY + 1, fg);
+            } else {
+              putColor(indexX + 1, indexY + 1, bg);
+            }
+            if ((char & (1 << 4)) === 0) {
+              putColor(indexX, indexY + 2, fg);
+            } else {
+              putColor(indexX, indexY + 2, bg);
+            }
+            if ((char & (1 << 6)) === 0) {
+              putColor(indexX + 1, indexY + 2, fg);
+            } else {
+              putColor(indexX + 1, indexY + 2, bg);
+            }
+            indexX += 2;
+            if (indexX === 80) {
+              indexX = 0;
+              indexY += 3;
+            }
+          }
+          CR.context.putImageData(imageData, 0, 0);
           const chunks = sliceIntoChunks(trame, 20);
           const url = `http://${window.location.hostname}`;
           await fetch(`${url}/new`);
