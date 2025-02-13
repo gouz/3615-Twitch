@@ -20,41 +20,49 @@ const client = new tmi.Client({
 const canvas = createCanvas(80, 72);
 const CM = new CanvasManager(canvas);
 const CV = new ConvertVideotex();
+const url = `http://${process.env.MINITEL_IP}`;
 
-const sliceIntoChunks = (arr, chunkSize) => {
+function sliceIntoChunks(arr, chunkSize) {
   const res = [];
-  for (let i = 0; i < arr.length; i += chunkSize) {
-    const chunk = arr.slice(i, i + chunkSize);
+  res.push([arr.shift(), arr.shift()]);
+  for (let i = 0; i < arr.length; i += chunkSize * 5) {
+    const chunk = arr.slice(i, i + chunkSize * 5);
     res.push(chunk);
   }
   return res;
+}
+
+const prepareImage = (img) => {
+  const chunks = sliceIntoChunks(CV.convert(CM.getPixels(img)), 20);
+  const arr = [`${url}/new`];
+  for (let i = 0; i < chunks.length; i++)
+    arr.push(
+      `${url}/put?${new URLSearchParams({
+        trame: chunks[i].join(","),
+      }).toString()}`
+    );
+  arr.push(`${url}/end`);
+  return arr;
+};
+
+let isCalling = false;
+const minitel_array = [];
+
+const call = () => {
+  isCalling = true;
+  if (minitel_array.length) {
+    const plo = minitel_array.shift();
+    fetch(plo).then(() => {
+      if (minitel_array.length) call();
+      else isCalling = false;
+    });
+  }
+  else isCalling = false;
 };
 
 const treatImage = async (img) => {
-  inTreatment = true;
-  const url = `http://${process.env.MINITEL_IP}`;
-  const chunks = sliceIntoChunks(CV.convert(CM.getPixels(img)), 100);
-  await axios.get(`${url}/new`);
-  for (let i = 0; i < chunks.length; i++) {
-    await axios.post(
-      `${url}/post`,
-      {
-        encrypt: Uint8Array.from(chunks[i]),
-      },
-      {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      }
-    );
-  }
-  await axios.get(`${url}/end`);
-  inTreatment = false;
-  setTimeout(() => {
-    if (messageStack.length) {
-      treatMessage(messageStack.shift());
-    }
-  }, 2000); // we display at least 2 sec the image
+  minitel_array.push(...prepareImage(img));
+  if (!isCalling) call();
 };
 
 const treatMessage = ({ message, tags }) => {
@@ -68,10 +76,10 @@ const treatMessage = ({ message, tags }) => {
     } else {
       axios
         .post(`${process.env.STABLE_DIFFUSION_URL}/sdapi/v1/txt2img`, {
-          width: 128,
-          height: 128,
-          steps: 15,
-          prompt,
+          width: 512,
+          height: 512,
+          steps: 10,
+          prompt: `${prompt}, black and white`,
           negative_prompt: "nsfw",
           cfg_scale: 7,
         })
@@ -79,6 +87,7 @@ const treatMessage = ({ message, tags }) => {
           if (response.data.images.length) {
             const img = new Image();
             img.src = `data:image/png;base64, ${response.data.images[0]}`;
+            treatImage(img);
             console.log(prompt);
             console.log();
             console.log(
@@ -86,23 +95,14 @@ const treatMessage = ({ message, tags }) => {
                 Buffer.from(response.data.images[0], "base64")
               )
             );
-            treatImage(img);
           }
         });
     }
   }
 };
 
-const messageStack = [];
-let inTreatment = false;
-
 client.connect().catch(console.error);
-client.on("message", (channel, tags, message, self) => {
+client.on("message", (_, tags, message, self) => {
   if (self) return;
-  if (inTreatment) {
-    messageStack.push({ message, tags });
-    return;
-  } else {
-    treatMessage({ message, tags });
-  }
+  treatMessage({ message, tags });
 });

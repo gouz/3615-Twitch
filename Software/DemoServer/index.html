@@ -11,25 +11,6 @@
         font-weight: 400;
       }
 
-      html,
-      body,
-      #app {
-        width: 100%;
-        height: 100%;
-        margin: 0;
-      }
-
-      #mockup {
-        width: 80px;
-        height: 72px;
-      }
-
-      #app {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-      }
-
       label,
       input {
         display: block;
@@ -53,11 +34,15 @@
         <label for="loadimg">Image</label>
         <input type="file" id="loadimg" />
         <canvas width="80" height="72" id="mockup"></canvas>
+        <canvas width="800" height="720" id="big_mockup"></canvas>
         <canvas width="80" height="72" id="render"></canvas>
+        <canvas width="800" height="720" id="big_render"></canvas>
       </form>
     </div>
     <script>
       function CanvasManager(canvas) {
+        this.canvas = canvas;
+        this.canvas.imageSmoothingEnabled = false;
         this.context = canvas.getContext("2d");
         this.width = canvas.width;
         this.height = canvas.height;
@@ -195,6 +180,8 @@
       const img = document.createElement("img");
       const CM = new CanvasManager(document.querySelector("#mockup"));
       const CR = new CanvasManager(document.querySelector("#render"));
+      const CBM = new CanvasManager(document.querySelector("#big_mockup"));
+      const CBR = new CanvasManager(document.querySelector("#big_render"));
       const CV = new ConvertVideotex();
       const imageData = CR.context.getImageData(0, 0, 80, 72);
 
@@ -212,12 +199,12 @@
           const trame = CV.convert(CM.getPixels(img));
           const colorRender = [
             [0, 0, 0, 255],
-            [0, 255, 0, 255],
-            [0, 0, 255, 255],
-            [255, 255, 0, 255],
             [255, 0, 0, 255],
+            [0, 255, 0, 255],
             [255, 255, 0, 255],
+            [0, 0, 255, 255],
             [255, 0, 255, 255],
+            [0, 255, 255, 255],
             [255, 255, 255, 255],
           ];
           let indexX = 0;
@@ -271,6 +258,10 @@
             }
           }
           CR.context.putImageData(imageData, 0, 0);
+
+          CBM.context.drawImage(CM.canvas, 0, 0, 800, 720);
+          CBR.context.drawImage(CR.canvas, 0, 0, 800, 720);
+
           const chunks = sliceIntoChunks(trame, 20);
           const url = `http://${window.location.hostname}`;
           await fetch(`${url}/new`);
